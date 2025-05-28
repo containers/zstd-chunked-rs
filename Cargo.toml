@@ -1,0 +1,34 @@
+[package]
+name = "zstd-chunked"
+version = "0.1.0"
+authors = ["Allison Karlitskaya <allison.karlitskaya@redhat.com>"]
+description = "Read zstd:chunked files"
+edition = "2024"
+keywords = ["containers", "zstd", "zstd-chunked"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/containers/zstd-chunked-rs"
+
+[dependencies]
+anyhow = "1.0.98"
+zerocopy = { version = "0.8.25", features = ["derive"] }
+zstd = "0.13.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22.1"
+
+[dev-dependencies]
+clap = { version = "4.5.39", features = ["derive"] }
+
+[lints.rust]
+missing_docs = "forbid"
+unsafe_code = "forbid"
+warnings = "deny"
+
+[lints.clippy]
+all = "deny"
+expect_used = "deny"
+nursery = "deny"
+panic = "deny"
+pedantic = "deny"
+unwrap_used = "deny"
