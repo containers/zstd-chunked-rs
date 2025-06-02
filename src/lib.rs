@@ -147,6 +147,7 @@ impl Stream {
 }
 
 /// A reference to file metadata, either the manifest or the tarsplit
+#[derive(Debug)]
 pub struct MetadataReference {
     /// The range itself, in bytes, in the compressed file.
     pub range: Range<u64>,
@@ -174,6 +175,7 @@ impl MetadataReference {
 
 /// References to the manifest and tarsplit metadata.  You can read these from the file footer or
 /// from the annotations on the OCI layer descriptor.
+#[derive(Debug)]
 pub struct MetadataReferences {
     /// The location of the manifest data
     pub manifest: MetadataReference,

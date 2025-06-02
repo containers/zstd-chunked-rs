@@ -24,6 +24,7 @@ clap = { version = "4.5.39", features = ["derive"] }
 missing_docs = "forbid"
 unsafe_code = "forbid"
 warnings = "deny"
+missing_debug_implementations = "deny"
 
 [lints.clippy]
 all = "deny"
