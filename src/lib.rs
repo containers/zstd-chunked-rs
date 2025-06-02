@@ -29,7 +29,7 @@ pub enum Chunk {
     /// The literal data appears directly.
     Inline(Box<[u8]>),
     /// The data appears at the referenced range, which may need to be fetched and decompressed.
-    External(Box<[ContentReference]>),
+    External(ContentReference),
 }
 
 /// Represents the layout of a zstd:chunked file.  You can reconstruct the original file contents
@@ -93,7 +93,7 @@ impl Stream {
                     let reference = manifest_entries.get(&name)
                         .with_context(|| format!("Filename {name} in zstd:chunked tarsplit missing from manifest"))?;
                     ensure!(size == reference.size, "size mismatch");
-                    chunks.push(Chunk::External(Box::from([reference.clone()])));
+                    chunks.push(Chunk::External(reference.clone()));
                 }
                 TarSplitEntry {
                     payload: Some(payload),
@@ -109,11 +109,11 @@ impl Stream {
     /// Iterates over all of the references that need to be satisfied for this stream to be
     /// reconstructed.  This might be useful to help prefetch the required items.
     pub fn references(&self) -> impl Iterator<Item = &ContentReference> {
-        self.chunks.iter().flat_map(|chunk| {
-            if let Chunk::External(items) = chunk {
-                items.as_ref()
+        self.chunks.iter().filter_map(|chunk| {
+            if let Chunk::External(reference) = chunk {
+                Some(reference)
             } else {
-                &[]
+                None
             }
         })
     }
@@ -135,10 +135,8 @@ impl Stream {
                 Chunk::Inline(data) => {
                     write.write_all(data)?;
                 }
-                Chunk::External(refs) => {
-                    for r#ref in refs {
-                        write.write_all(&resolve_reference(r#ref)?)?;
-                    }
+                Chunk::External(r#ref) => {
+                    write.write_all(&resolve_reference(r#ref)?)?;
                 }
             }
         }
