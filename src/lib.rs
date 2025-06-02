@@ -200,34 +200,28 @@ impl MetadataReferences {
         })
     }
 
-    /// Parses the metadata references from OCI layer descriptor annotations.  The type of the
-    /// annotations `HashMap` was chosen to be compatible with the oci-spec crate.  Returns None if
-    /// this doesn't appear to be a zstd:chunked layer descriptor.
-    #[allow(clippy::needless_pass_by_value)]
-    #[must_use]
-    pub fn from_oci(annotations: HashMap<String, String>) -> Option<Self> {
-        let manifest_digest =
-            annotations.get("io.github.containers.zstd-chunked.manifest-checksum");
-        let manifest_position =
-            annotations.get("io.github.containers.zstd-chunked.manifest-position")?;
-        let tarsplit_digest =
-            annotations.get("io.github.containers.zstd-chunked.tarsplit-checksum");
-        let tarsplit_position =
-            annotations.get("io.github.containers.zstd-chunked.tarsplit-position")?;
+    /// Parses the metadata references from OCI layer descriptor annotations.  You should provide a
+    /// 'get' closure that returns the requested annotation, or None if it doesn't exist. Returns
+    /// None if this doesn't appear to be a zstd:chunked layer descriptor.
+    pub fn from_oci<'a, S: AsRef<str> + 'a>(get: impl Fn(&str) -> Option<&'a S>) -> Option<Self> {
+        let manifest_digest = get("io.github.containers.zstd-chunked.manifest-checksum");
+        let manifest_position = get("io.github.containers.zstd-chunked.manifest-position")?;
+        let tarsplit_digest = get("io.github.containers.zstd-chunked.tarsplit-checksum");
+        let tarsplit_position = get("io.github.containers.zstd-chunked.tarsplit-position")?;
 
         Some(Self {
-            manifest: match to_vec_u64(manifest_position)?.as_slice() {
+            manifest: match to_vec_u64(manifest_position.as_ref())?.as_slice() {
                 &[start, length, uncompressed_size, 1] => MetadataReference {
                     range: start..(start + length),
-                    digest: manifest_digest.cloned(),
+                    digest: manifest_digest.map(|s| s.as_ref().to_owned()),
                     uncompressed_size,
                 },
                 _ => None?,
             },
-            tarsplit: match to_vec_u64(tarsplit_position)?.as_slice() {
+            tarsplit: match to_vec_u64(tarsplit_position.as_ref())?.as_slice() {
                 &[start, length, uncompressed_size] => MetadataReference {
                     range: start..(start + length),
-                    digest: tarsplit_digest.cloned(),
+                    digest: tarsplit_digest.map(|s| s.as_ref().to_owned()),
                     uncompressed_size,
                 },
                 _ => None?,
