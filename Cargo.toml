@@ -19,6 +19,12 @@ base64 = "0.22.1"
 
 [dev-dependencies]
 clap = { version = "4.5.39", features = ["derive"] }
+futures = "0.3.31"
+futures-timer = "3.0.3"
+indicatif = { version = "0.17.11", features = ["tokio"] }
+oci-client = "0.15.0"
+tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
+tokio-util = "0.7.15"
 
 [lints.rust]
 missing_docs = "forbid"
