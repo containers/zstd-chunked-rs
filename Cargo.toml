@@ -32,3 +32,7 @@ nursery = "deny"
 panic = "deny"
 pedantic = "deny"
 unwrap_used = "deny"
+
+[profile.profiling]
+inherits = 'release'
+strip = false

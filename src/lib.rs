@@ -2,13 +2,9 @@
 mod format;
 
 use core::ops::Range;
-use std::{
-    collections::HashMap,
-    io::{Read, Write},
-};
+use std::{collections::HashMap, io::Write};
 
 use anyhow::{Context, Result, ensure};
-use zstd::stream::Decoder;
 
 use self::format::{Footer, FooterReference, Manifest, TarSplitEntry};
 
@@ -53,8 +49,9 @@ impl Stream {
     /// This function can fail if any of the metadata isn't in the expected format (zstd-compressed
     /// JSON) or if there are missing mandatory fields or internal inconsistencies.  In all cases,
     /// it indicates a corrupt zstd:chunked file (or a bug in the library).
-    pub fn new_from_frames(manifest: impl Read, tarsplit: impl Read) -> Result<Self> {
-        let manifest: Manifest = serde_json::from_reader(Decoder::new(manifest)?)?;
+    pub fn new_from_frames(manifest: &[u8], tarsplit: &[u8]) -> Result<Self> {
+        let manifest = zstd::decode_all(manifest)?;
+        let manifest: Manifest = serde_json::from_slice(&manifest)?;
 
         ensure!(
             manifest.version == 1,
@@ -81,10 +78,13 @@ impl Stream {
 
         // Iterate over the chunks in the tarsplit.  For inline chunks, store the inline data.  For
         // external chunks, look them up in the manifest_entries and store what we find.
-        let chunks = serde_json::Deserializer::from_reader(Decoder::new(tarsplit)?)
-            .into_iter()
-            .map(|entry| {
-                Ok(match entry? {
+        let tarsplit = String::from_utf8(zstd::decode_all(tarsplit)?)?;
+        let mut chunks = vec![];
+
+        for line in tarsplit.lines() {
+            let entry: TarSplitEntry = serde_json::from_str(line)?;
+
+            match entry {
                 TarSplitEntry {
                     name: Some(name),
                     size: Some(size),
@@ -93,17 +93,15 @@ impl Stream {
                     let reference = manifest_entries.get(&name)
                         .with_context(|| format!("Filename {name} in zstd:chunked tarsplit missing from manifest"))?;
                     ensure!(size == reference.size, "size mismatch");
-                    Some(Chunk::External(Box::from([reference.clone()])))
+                    chunks.push(Chunk::External(Box::from([reference.clone()])));
                 }
                 TarSplitEntry {
                     payload: Some(payload),
                     ..
-                } => Some(Chunk::Inline(payload)),
-                _ => None,
-            })
-            })
-            .filter_map(Result::transpose)
-            .collect::<Result<Vec<_>>>()?;
+                } => chunks.push(Chunk::Inline(payload)),
+                _ => {}
+            }
+        }
 
         Ok(Self { chunks })
     }
