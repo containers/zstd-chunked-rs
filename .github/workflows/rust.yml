@@ -1,0 +1,22 @@
+name: rust
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v4
+    - run: cargo build --verbose
+    - run: cargo fmt --check
+    - run: cargo clippy --all-targets -- -Dwarnings
+    - run: cargo test --verbose
